@@ -11,8 +11,6 @@ phases:
   build:
     commands:
       - npm run tsc
-  post_build:
-    commands:
       - NPM_VERSION=$(npm view aws-apigw-authorizer version) &&
         LOCAL_VERSION=$(node -e 'console.log(require("./package.json").version)') &&
         if [ ${LOCAL_VERSION} != ${NPM_VERSION} ]; then
