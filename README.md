@@ -19,3 +19,18 @@ Basic usage:
 To also clean up old files, specify '--clean' as the last parameter. This will delete *all* files in the bucket that are not included in the current upload (**do** ensure you really want this):
 
     s3-spa-upload dist-dir my-s3-bucket-name --clean
+
+## Cache-Control settings
+
+File/ext | Cache setting | Description
+---------|---------------|----------
+`index.html`|`no-cache`|
+`css`|`public,max-age=31536000,immutable`|As longs as possible
+`js`|`public,max-age=31536000,immutable`|As long as possible
+`png`|`public,max-age=86400`|One day
+`ico`|`public,max-age=86400`|One day
+`txt`|`public,max-age=86400`|One day
+
+## Content-Type settings
+
+Based on file extensions using https://www.npmjs.com/package/mime-types
