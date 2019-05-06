@@ -1,0 +1,24 @@
+version: 0.2
+
+env:
+  parameter-store:
+    NPM_TOKEN: /ottokruse/npm/token
+
+phases:
+  install:
+    commands:
+      - npm it
+  build:
+    commands:
+      - npm run tsc
+  post_build:
+    commands:
+      - NPM_VERSION=$(npm view aws-apigw-authorizer version) &&
+        LOCAL_VERSION=$(node -e 'console.log(require("./package.json").version)') &&
+        if [ ${LOCAL_VERSION} != ${NPM_VERSION} ]; then
+            echo "//registry.npmjs.org/:_authToken=${NPM_TOKEN}" > ~/.npmrc;
+            npm publish;
+        fi;
+cache:
+  paths:
+    - 'node_modules/**/*'
