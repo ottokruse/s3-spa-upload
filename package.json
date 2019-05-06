@@ -14,8 +14,8 @@
   "bin": {
     "s3-spa-upload": "./index.js"
   },
-  "keywords": [],
-  "author": "",
+  "keywords": ["SPA", "AWS", "S3", "React", "Angular", "Vue", "upload", "single page application"],
+  "author": "Otto Kruse",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/ottokruse/s3-spa-upload/issues"
