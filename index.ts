@@ -52,7 +52,7 @@ async function uploadToS3(bucket: string, key: string, filePath: string) {
         ContentType: contentType(extname(filePath)) || undefined,
     };
     await S3CLIENT.putObject(params).promise();
-    console.log(`Uploaded s3://${bucket}${key} from ${filePath}`);
+    console.log(`Uploaded s3://${bucket}/${key} from ${filePath}`);
 }
 
 async function main() {
