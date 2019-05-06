@@ -1,0 +1,32 @@
+{
+  "name": "s3-spa-upload",
+  "version": "1.0.0",
+  "description": "Upload a single page application to S3 with the right content-type and cache-control meta-data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "tsc"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ottokruse/s3-spa-upload.git"
+  },
+  "bin": {
+    "s3-spa-upload": "./index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ottokruse/s3-spa-upload/issues"
+  },
+  "homepage": "https://github.com/ottokruse/s3-spa-upload#readme",
+  "dependencies": {
+    "aws-sdk": "^2.449.0",
+    "mime-types": "^2.1.24"
+  },
+  "devDependencies": {
+    "@types/mime-types": "^2.1.0",
+    "@types/node": "^12.0.0"
+  }
+}
