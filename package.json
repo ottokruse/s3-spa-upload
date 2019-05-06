@@ -1,6 +1,6 @@
 {
   "name": "s3-spa-upload",
-  "version": "0.2.7",
+  "version": "1.0.0",
   "description": "Upload a single page application to S3 with the right content-type and cache-control meta-data",
   "main": "index.js",
   "scripts": {
@@ -14,7 +14,16 @@
   "bin": {
     "s3-spa-upload": "./index.js"
   },
-  "keywords": ["SPA", "AWS", "S3", "React", "Angular", "Vue", "upload", "single page application"],
+  "keywords": [
+    "SPA",
+    "AWS",
+    "S3",
+    "React",
+    "Angular",
+    "Vue",
+    "upload",
+    "single page application"
+  ],
   "author": "Otto Kruse",
   "license": "ISC",
   "bugs": {
