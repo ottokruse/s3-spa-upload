@@ -46,7 +46,7 @@ async function walkDirectory(directoryPath: string, callback: (filePath: string)
 async function uploadToS3(bucket: string, key: string, filePath: string) {
     const params = {
         Bucket: bucket,
-        Key: filePath.substring(key.length),
+        Key: filePath,
         Body: readFileSync(filePath),
         CacheControl: getCacheControl(filePath),
         ContentType: contentType(extname(filePath)) || undefined,
