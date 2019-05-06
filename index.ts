@@ -30,16 +30,20 @@ function getCacheControl(filepath: string) {
     return DEFAULT_CACHE_CONTROL_MAPPING[extname(filename)];
 }
 
-async function walkDirectory(directoryPath: string, callback: (filePath: string) => any ) {
+async function walkDirectory(directoryPath: string, callback: (filePath: string) => any) {
+    const uploaded: string[] = [];
     await Promise.all(readdirSync(directoryPath).map(async entry => {
         const filePath = join(directoryPath, entry);
         const stat = statSync(filePath);
         if (stat.isFile()) {
-            await callback(filePath);
+            const key = await callback(filePath);
+            uploaded.push(key);
         } else if (stat.isDirectory()) {
-            await walkDirectory(filePath, callback);
-        }  
+            const uploadedRecursively = await walkDirectory(filePath, callback);
+            uploaded.push(...uploadedRecursively);
+        }
     }));
+    return uploaded;
 }
 
 async function uploadToS3(bucket: string, key: string, filePath: string) {
@@ -52,6 +56,18 @@ async function uploadToS3(bucket: string, key: string, filePath: string) {
     };
     await S3CLIENT.putObject(params).promise();
     console.log(`Uploaded s3://${bucket}/${key} from ${filePath}`);
+    return key;
+}
+
+async function removeOldFiles(bucket: string, uploaded: string[]) {
+    const resp = await S3CLIENT.listObjectsV2({ Bucket: bucket }).promise();
+    const existingFiles = resp.Contents!.map(obj => obj.Key!);
+    const filesToDelete = existingFiles.filter(key => !uploaded.includes(key));
+    await Promise.all(filesToDelete.map(async (key) => {
+        await S3CLIENT.deleteObject({ Bucket: bucket, Key: key }).promise()
+        console.log(`Deleted old file: ${key}`);
+    }));
+    console.log(`Deleted ${filesToDelete.length} old files`);
 }
 
 async function main() {
@@ -66,7 +82,10 @@ async function main() {
         process.exit(1);
     }
     const regexp = new RegExp(`^${dir}/?`);
-    await walkDirectory(dir, (filePath) => uploadToS3(bucket, filePath.replace(regexp, ''), filePath));
+    const uploaded = await walkDirectory(dir, (filePath) => uploadToS3(bucket, filePath.replace(regexp, ''), filePath));
+    if (process.argv[4] === '--clean') {
+        await removeOldFiles(bucket, uploaded);
+    }
 }
 
 if (require.main === module) {
