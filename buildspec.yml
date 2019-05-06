@@ -7,7 +7,7 @@ env:
 phases:
   install:
     commands:
-      - npm it
+      - npm i
   build:
     commands:
       - npm run tsc
