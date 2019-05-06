@@ -27,8 +27,7 @@ function getCacheControl(filepath: string) {
     if (filename === 'index.html') {
         return NO_CACHE;
     }
-    const extension = filename.split('.').slice(-1)[0];
-    return DEFAULT_CACHE_CONTROL_MAPPING[extension];
+    return DEFAULT_CACHE_CONTROL_MAPPING[extname(filename)];
 }
 
 async function walkDirectory(directoryPath: string, callback: (filePath: string) => any ) {
