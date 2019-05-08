@@ -16,9 +16,9 @@ Basic usage:
 
     s3-spa-upload dist-dir my-s3-bucket-name
 
-To also clean up old files, specify '--clean' as the last parameter. This will delete *all* files in the bucket that are not included in the current upload (**do** ensure you really want this):
+To also clean up old files, specify '--delete' as the last parameter. This will delete *all* files in the bucket that are not included in the current upload (**do** ensure you really want this):
 
-    s3-spa-upload dist-dir my-s3-bucket-name --clean
+    s3-spa-upload dist-dir my-s3-bucket-name --delete
 
 ## Cache-Control settings
 

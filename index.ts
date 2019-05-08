@@ -83,7 +83,7 @@ async function main() {
     }
     const regexp = new RegExp(`^${dir}/?`);
     const uploaded = await walkDirectory(dir, (filePath) => uploadToS3(bucket, filePath.replace(regexp, ''), filePath));
-    if (process.argv[4] === '--clean') {
+    if (process.argv[4] === '--delete') {
         await removeOldFiles(bucket, uploaded);
     }
 }
