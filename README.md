@@ -76,7 +76,7 @@ s3SpaUpload('dir', 'bucket', options).catch(console.error);
 File/ext | Cache setting | Description
 ---------|---------------|----------
 `index.html`|`no-cache`|
-`css`|`public,max-age=31536000,immutable`|As longs as possible
+`css`|`public,max-age=31536000,immutable`|As long as possible
 `js`|`public,max-age=31536000,immutable`|As long as possible
 `png`|`public,max-age=86400`|One day
 `ico`|`public,max-age=86400`|One day
