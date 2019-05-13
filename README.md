@@ -33,7 +33,7 @@ You can provide your desired cache-control mapping in a json file that contains 
 }
 ```
 
-Suppose your file is called `cache-control.json`:
+Suppose your mapping file is called `cache-control.json`:
 
     s3-spa-upload dist-dir my-s3-bucket-name --cache-control-mapping cache-control.json
 
