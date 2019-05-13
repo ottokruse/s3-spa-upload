@@ -18,7 +18,7 @@ Basic usage:
 
 ### Clean-up old files
 
-To also clean up old files, specify '--delete' as the last parameter. This will delete *all* files in the bucket that are not included in the current upload (**do** ensure you really want this):
+To also clean up old files, use the --delete option. This will delete all files in the bucket that are not included in the current upload (limited to the supplied prefix, see below):
 
     s3-spa-upload dist-dir my-s3-bucket-name --delete
 
@@ -33,7 +33,7 @@ You can provide your desired cache-control mapping in a json file that contains 
 }
 ```
 
-Suppose your file is called `cache-control.json` then use like this:
+Suppose your file is called `cache-control.json`:
 
     s3-spa-upload dist-dir my-s3-bucket-name --cache-control-mapping cache-control.json
 
