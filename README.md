@@ -51,10 +51,11 @@ Note that when used in conjunction with `--delete`, this means only old files ma
 
 ```typescript
 import s3SpaUpload from 's3-spa-upload';
+// const s3SpaUpload = require('s3-spa-upload')
 
 s3SpaUpload('dir', 'bucket').catch(console.error);
 
-// Or supply options:
+// Can supply options:
 const options = {
     delete: true,
     prefix: 'mobile',
