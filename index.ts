@@ -18,6 +18,7 @@ interface AwsCredentials {
     secretAccessKey: string
     sessionToken?: string
 }
+
 interface Options {
     delete?: boolean;
     cacheControlMapping?: CacheControlMapping;
@@ -25,11 +26,9 @@ interface Options {
     prefix?: string;
 }
 
-
 export const CACHE_FOREVER = 'public,max-age=31536000,immutable';
 export const CACHE_ONE_DAY = 'public,max-age=86400';
 export const NO_CACHE = 'no-cache';
-
 export const DEFAULT_CACHE_CONTROL_MAPPING: CacheControlMapping = {
     'index.html': NO_CACHE,
     '*.css': CACHE_FOREVER,
@@ -48,19 +47,19 @@ function getCacheControl(filepath: string, cacheControlMapping: CacheControlMapp
 }
 
 async function walkDirectory(directoryPath: string, callback: (filePath: string) => any) {
-    const uploaded: string[] = [];
+    const processed: string[] = [];
     await Promise.all(readdirSync(directoryPath).map(async entry => {
         const filePath = join(directoryPath, entry);
         const stat = statSync(filePath);
         if (stat.isFile()) {
             const key = await callback(filePath);
-            uploaded.push(key);
+            processed.push(key);
         } else if (stat.isDirectory()) {
             const uploadedRecursively = await walkDirectory(filePath, callback);
-            uploaded.push(...uploadedRecursively);
+            processed.push(...uploadedRecursively);
         }
     }));
-    return uploaded;
+    return processed;
 }
 
 async function uploadToS3(bucket: string, key: string, filePath: string, prefix: string, cacheControlMapping: CacheControlMapping) {

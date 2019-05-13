@@ -10,7 +10,7 @@ To install globally (recommended):
 
     npm install -g s3-spa-upload
 
-## Usage
+## Command Line Usage
 
 Basic usage:
 
@@ -46,6 +46,30 @@ By default the SPA will be uploaded to the root of your S3 bucket. If you don't 
     s3-spa-upload dist-dir my-s3-bucket-name --prefix mobile
 
 Note that when used in conjunction with `--delete`, this means only old files matching that same prefix will be deleted.
+
+## Programmatic Usage
+
+```typescript
+import s3SpaUpload from 's3-spa-upload';
+
+s3SpaUpload('dir', 'bucket').catch(console.error);
+
+// Or supply options:
+const options = {
+    delete: true,
+    prefix: 'mobile',
+    cacheControlMapping: {
+        'index.html': 'no-cache',
+        '*.js': 'public,max-age=31536000,immutable',
+    },
+    awsCredentials: {
+        accessKeyId: '...'
+        secretAccessKey: '...'
+        sessionToken: '...'
+    }
+}
+s3SpaUpload('dir', 'bucket', options).catch(console.error);
+```
 
 ## Default Cache-Control settings
 
