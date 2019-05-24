@@ -4,6 +4,12 @@ Upload a Single Page Application (React, Angular, Vue, ...) to S3 with the right
 
 ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiQit5K1dqTW4zc2xYbnhOK3pFNU01dEtmM3gzODk4dmZaMDkvVVUzcHJjMWZHMmpCT05yaVEzT3I3WDZ1L25lcTI4QXFhUnlRbngrZTBsNmpwbWdCOEJJPSIsIml2UGFyYW1ldGVyU3BlYyI6ImZoY2c2aVA0ZHBKV1FxS24iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 
+This requires the following AWS S3 permissions (see sample CloudFormation policy template below):
+
+- s3:PutObject on objects in your bucket
+- s3:ListBucket on your bucket (only needed when using --delete option)
+- s3:DeleteObject on objects in your bucket (only needed when using --delete option)
+
 ## Installation
 
 To install globally (recommended):
@@ -86,3 +92,20 @@ File/ext | Cache setting | Description
 ## Content-Type settings
 
 Based on file extensions using https://www.npmjs.com/package/mime-types
+
+## AWS Policy Template
+
+This CloudFormation IAM Policy template grants the needed permissions:
+
+```yaml
+- Version: "2012-10-17"
+    Statement:
+      - Effect: Allow # This effect is only needed when using the --delete option
+          Action: s3:ListBucket
+          Resource: arn:aws:s3:::your-bucket-name
+      - Effect: Allow
+          Action:
+            - s3:DeleteObject # This action is only needed when using the --delete option
+            - s3:PutObject
+          Resource: arn:aws:s3:::your-bucket-name/*
+```
