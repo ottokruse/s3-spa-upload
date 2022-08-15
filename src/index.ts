@@ -27,13 +27,15 @@ interface Options {
 export const CACHE_FOREVER = "public,max-age=31536000,immutable";
 export const CACHE_ONE_DAY = "public,max-age=86400";
 export const NO_CACHE = "no-cache";
+export const ONE_MIN_CACHE_SWR_FOREVER =
+  "public,max-age=60,stale-while-revalidate=31536000";
 export const DEFAULT_CACHE_CONTROL_MAPPING: CacheControlMapping = {
-  "index.html": NO_CACHE,
+  "index.html": ONE_MIN_CACHE_SWR_FOREVER,
   "*.css": CACHE_FOREVER,
   "*.js": CACHE_FOREVER,
   "*.png": CACHE_ONE_DAY,
   "*.ico": CACHE_ONE_DAY,
-  "*.txt": CACHE_ONE_DAY
+  "*.txt": CACHE_ONE_DAY,
 };
 
 function getCacheControl(
