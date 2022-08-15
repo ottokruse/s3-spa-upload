@@ -55,7 +55,7 @@ async function walkDirectory(
 ) {
   const processed: string[] = [];
   await Promise.all(
-    readdirSync(directoryPath).map(async entry => {
+    readdirSync(directoryPath).map(async (entry) => {
       const filePath = join(directoryPath, entry);
       const stat = statSync(filePath);
       if (stat.isFile()) {
@@ -82,7 +82,7 @@ async function uploadToS3(
     Key: `${prefix}${key}`,
     Body: readFileSync(filePath),
     CacheControl: getCacheControl(filePath, cacheControlMapping),
-    ContentType: contentType(extname(filePath)) || undefined
+    ContentType: contentType(extname(filePath)) || undefined,
   };
   await S3CLIENT.putObject(params).promise();
   console.log(
@@ -97,7 +97,7 @@ async function removeOldFiles(
   prefix: string
 ) {
   let existingFiles: string[] = [];
-  await new Promise((resolve, reject) =>
+  await new Promise<void>((resolve, reject) =>
     S3CLIENT.listObjectsV2({ Bucket: bucket }).eachPage((err, page) => {
       if (err) {
         reject(err);
@@ -105,7 +105,7 @@ async function removeOldFiles(
       }
       if (page) {
         existingFiles = existingFiles.concat(
-          page.Contents!.map(obj => obj.Key!)
+          page.Contents!.map((obj) => obj.Key!)
         );
         return true;
       }
@@ -114,10 +114,10 @@ async function removeOldFiles(
     })
   );
   const filesToDelete = existingFiles
-    .filter(key => key.startsWith(prefix))
-    .filter(key => !uploaded.includes(key));
+    .filter((key) => key.startsWith(prefix))
+    .filter((key) => !uploaded.includes(key));
   await Promise.all(
-    filesToDelete.map(async key => {
+    filesToDelete.map(async (key) => {
       await S3CLIENT.deleteObject({ Bucket: bucket, Key: key }).promise();
       console.log(`Deleted old file: ${key}`);
     })
@@ -139,7 +139,7 @@ export default async function s3SpaUpload(
   }
   if (options.awsProfile) {
     const credentials = new SharedIniFileCredentials({
-      profile: options.awsProfile
+      profile: options.awsProfile,
     });
     S3CLIENT.config.update({ credentials });
   }
@@ -150,7 +150,7 @@ export default async function s3SpaUpload(
       ? options.prefix
       : `${options.prefix}/`;
   }
-  const uploaded = await walkDirectory(dir, filePath =>
+  const uploaded = await walkDirectory(dir, (filePath) =>
     uploadToS3(
       bucket,
       filePath.replace(regexp, ""),

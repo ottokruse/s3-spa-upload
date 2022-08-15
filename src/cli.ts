@@ -5,7 +5,7 @@ import s3SpaUpload, { CacheControlMapping } from "./index";
 import yargs from "yargs";
 
 async function main() {
-  const args = yargs
+  const args = await yargs
     .command(
       "$0 <directory> <bucketname> [options]",
       "Upload a dist/build directory containing a SPA (React, Angular, Vue, ...) to AWS S3"
@@ -41,12 +41,12 @@ async function main() {
     delete: args.delete,
     cacheControlMapping,
     prefix: args.prefix,
-    awsProfile: args.profile
+    awsProfile: args.profile,
   });
 }
 
 if (require.main === module) {
-  main().catch(err => {
+  main().catch((err) => {
     console.error(err);
     process.exit(1);
   });
