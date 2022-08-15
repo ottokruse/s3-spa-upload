@@ -80,14 +80,14 @@ s3SpaUpload('dir', 'bucket', options).catch(console.error);
 
 ## Default Cache-Control settings
 
-File/ext | Cache setting | Description
----------|---------------|----------
-`index.html`|`no-cache`|
-`css`|`public,max-age=31536000,immutable`|As long as possible
-`js`|`public,max-age=31536000,immutable`|As long as possible
-`png`|`public,max-age=86400`|One day
-`ico`|`public,max-age=86400`|One day
-`txt`|`public,max-age=86400`|One day
+| File/ext     | Cache setting                                          | Description                                                                                              |
+| ------------ | ------------------------------------------------------ | -------------------------------------------------------------------------------------------------------- |
+| `index.html` | `public,max-age=60,stale-while-revalidate=31536000`    | 1 minute, but allow stale content for as long as possible, provided a cache refresh request is made also |
+| `css`        | `public,max-age=31536000,immutable`                    | As long as possible                                                                                      |
+| `js`         | `public,max-age=31536000,immutable`                    | As long as possible                                                                                      |
+| `png`        | `public,max-age=86400,stale-while-revalidate=31536000` | One day, but allow stale content for as long as possible, provided a cache refresh request is made also  |
+| `ico`        | `public,max-age=86400,stale-while-revalidate=31536000` | One day, but allow stale content for as long as possible, provided a cache refresh request is made also  |
+| `txt`        | `public,max-age=86400,stale-while-revalidate=31536000` | One day, but allow stale content for as long as possible, provided a cache refresh request is made also  |
 
 ## Content-Type settings
 
