@@ -1,6 +1,8 @@
 # S3 SPA Upload
 
-Upload a Single Page Application (React, Angular, Vue, ...) to S3 with the right content-type and cache-control meta-data
+Upload a Single Page Application (React, Angular, Vue, ...) to S3 with the right content-type and cache-control meta-data.
+
+This module uploads the local SPA's build directory to S3, overwriting what's currently on S3. There's no intelligence (yet) to only upload changed files.
 
 ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiQit5K1dqTW4zc2xYbnhOK3pFNU01dEtmM3gzODk4dmZaMDkvVVUzcHJjMWZHMmpCT05yaVEzT3I3WDZ1L25lcTI4QXFhUnlRbngrZTBsNmpwbWdCOEJJPSIsIml2UGFyYW1ldGVyU3BlYyI6ImZoY2c2aVA0ZHBKV1FxS24iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 
@@ -12,7 +14,7 @@ This requires the following AWS S3 permissions (see sample CloudFormation policy
 
 ## Installation
 
-To install globally (recommended):
+To install globally (for CLI usage):
 
     npm install -g s3-spa-upload
 
@@ -69,11 +71,12 @@ const options = {
         'index.html': 'no-cache',
         '*.js': 'public,max-age=31536000,immutable',
     },
+    concurrency: 100, // max nr of files to upload to S3 in parallel
     awsCredentials: {
         accessKeyId: '...'
         secretAccessKey: '...'
         sessionToken: '...'
-    }
+    } // Optional. If not provided explicitly, the AWS SDK will source credentials as usual
 }
 s3SpaUpload('dir', 'bucket', options).catch(console.error);
 ```

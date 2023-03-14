@@ -26,8 +26,16 @@ async function main() {
       "Path prefix to prepend to every S3 object key of uploaded files"
     )
     .string("prefix")
-    .string("profile")
-    .describe("profile", "AWS profile to use")
+    .number("c")
+    .check((args) => {
+      if (args.c !== undefined && args.c < 1)
+        throw new Error(
+          `Error: concurrency must be at least 1, but you provided: ${args.c}`
+        );
+      return true;
+    })
+    .alias("c", "concurrency")
+    .default("concurrency", 100)
     .help()
     .wrap(88).argv;
 
@@ -41,7 +49,7 @@ async function main() {
     delete: args.delete,
     cacheControlMapping,
     prefix: args.prefix,
-    awsProfile: args.profile,
+    concurrency: args.concurrency,
   });
 }
 

@@ -1,10 +1,15 @@
 import { readdirSync, readFileSync, statSync } from "fs";
-import { extname, join } from "path";
+import { extname, join, resolve } from "path";
 import { contentType } from "mime-types";
-import { S3, SharedIniFileCredentials } from "aws-sdk";
+import {
+  S3Client,
+  PutObjectCommand,
+  DeleteObjectCommand,
+  paginateListObjectsV2,
+} from "@aws-sdk/client-s3";
 import minimatch from "minimatch";
-
-const S3CLIENT = new S3();
+import fastq from "fastq";
+import type { queueAsPromised } from "fastq";
 
 export interface CacheControlMapping {
   [glob: string]: string;
@@ -17,11 +22,22 @@ interface AwsCredentials {
 }
 
 interface Options {
+  /**
+   * Delete existing objects from S3 that are not part of the current upload?
+   * (This will be limited to the supplied prefix, if any)
+   */
   delete?: boolean;
   cacheControlMapping?: CacheControlMapping;
   awsCredentials?: AwsCredentials;
-  awsProfile?: string;
+  /**
+   * S3 Bucket prefix to upload to
+   */
   prefix?: string;
+  /**
+   * Max nr of files to upload to S3 in parallel
+   * @default 100
+   */
+  concurrency: number;
 }
 
 export const CACHE_FOREVER = "public,max-age=31536000,immutable";
@@ -52,26 +68,49 @@ function getCacheControl(
 
 async function walkDirectory(
   directoryPath: string,
-  callback: (filePath: string) => any
+  callback: (filePath: string) => Promise<string>,
+  concurrency: number,
+  _recursion: {
+    root: boolean;
+    promises: Promise<any>[];
+    processedS3Keys: string[];
+    q?: queueAsPromised<string, string> | undefined;
+  } = {
+    root: true,
+    processedS3Keys: [],
+    promises: [],
+  }
 ) {
-  const processed: string[] = [];
-  await Promise.all(
-    readdirSync(directoryPath).map(async (entry) => {
-      const filePath = join(directoryPath, entry);
-      const stat = statSync(filePath);
-      if (stat.isFile()) {
-        const key = await callback(filePath);
-        processed.push(key);
-      } else if (stat.isDirectory()) {
-        const uploadedRecursively = await walkDirectory(filePath, callback);
-        processed.push(...uploadedRecursively);
-      }
-    })
-  );
-  return processed;
+  if (!_recursion.q) {
+    _recursion.q = fastq.promise(callback, concurrency);
+  }
+  for (const entry of readdirSync(directoryPath)) {
+    const filePath = join(directoryPath, entry);
+    const stat = statSync(filePath);
+    if (stat.isFile()) {
+      _recursion.promises.push(
+        _recursion.q
+          .push(filePath)
+          .then((key) => _recursion.processedS3Keys.push(key))
+      );
+    } else if (stat.isDirectory()) {
+      await walkDirectory(filePath, callback, concurrency, {
+        ..._recursion,
+        root: false,
+      });
+    }
+  }
+  if (_recursion.root) {
+    console.log(
+      `Upload started of ${_recursion.promises.length} files (with concurrency: ${_recursion.q.concurrency})`
+    );
+    await Promise.all(_recursion.promises);
+  }
+  return _recursion.processedS3Keys;
 }
 
 async function uploadToS3(
+  s3client: S3Client,
   bucket: string,
   key: string,
   filePath: string,
@@ -85,7 +124,8 @@ async function uploadToS3(
     CacheControl: getCacheControl(filePath, cacheControlMapping),
     ContentType: contentType(extname(filePath)) || undefined,
   };
-  await S3CLIENT.putObject(params).promise();
+  await new Promise((resolve) => setTimeout(resolve, 2000));
+  await s3client.send(new PutObjectCommand(params));
   console.log(
     `Uploaded s3://${params.Bucket}/${params.Key} | cache-control=${params.CacheControl} | content-type=${params.ContentType}`
   );
@@ -93,57 +133,60 @@ async function uploadToS3(
 }
 
 async function removeOldFiles(
+  s3client: S3Client,
   bucket: string,
-  uploaded: string[],
-  prefix: string
+  uploadedKeys: string[],
+  prefix: string,
+  concurrency: number
 ) {
-  let existingFiles: string[] = [];
-  await new Promise<void>((resolve, reject) =>
-    S3CLIENT.listObjectsV2({ Bucket: bucket }).eachPage((err, page) => {
-      if (err) {
-        reject(err);
-        return false;
-      }
-      if (page) {
-        existingFiles = existingFiles.concat(
-          page.Contents!.map((obj) => obj.Key!)
-        );
-        return true;
-      }
-      resolve();
-      return false;
-    })
+  const paginator = paginateListObjectsV2(
+    {
+      client: s3client,
+    },
+    {
+      Bucket: bucket,
+      Prefix: prefix,
+    }
   );
-  const filesToDelete = existingFiles
+  let existingKeys: string[] = [];
+  for await (const page of paginator) {
+    for (const obj of page.Contents ?? []) {
+      if (obj.Key) existingKeys.push(obj.Key);
+    }
+  }
+  const keysToDelete = existingKeys
     .filter((key) => key.startsWith(prefix))
-    .filter((key) => !uploaded.includes(key));
-  await Promise.all(
-    filesToDelete.map(async (key) => {
-      await S3CLIENT.deleteObject({ Bucket: bucket, Key: key }).promise();
-      console.log(`Deleted old file: ${key}`);
-    })
+    .filter((key) => !uploadedKeys.includes(key));
+  const q = fastq.promise(
+    (key: string) =>
+      s3client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
+    concurrency
   );
-  return filesToDelete;
+  const promises = [];
+  for (const key of keysToDelete) {
+    promises.push(
+      q.push(key).then(() => console.log(`Deleted old file: ${key}`))
+    );
+  }
+  await Promise.all(promises);
+  return keysToDelete;
 }
 
+let _s3client: S3Client;
 export default async function s3SpaUpload(
   dir: string,
   bucket: string,
-  options: Options = {}
+  options: Options = {
+    concurrency: 100,
+  }
 ) {
-  const regexp = new RegExp(`^${dir}/?`);
+  dir = resolve(dir);
   if (!options.cacheControlMapping) {
     options.cacheControlMapping = DEFAULT_CACHE_CONTROL_MAPPING;
   }
-  if (options.awsCredentials) {
-    S3CLIENT.config.update({ credentials: options.awsCredentials });
-  }
-  if (options.awsProfile) {
-    const credentials = new SharedIniFileCredentials({
-      profile: options.awsProfile,
-    });
-    S3CLIENT.config.update({ credentials });
-  }
+  _s3client = new S3Client({
+    credentials: options.awsCredentials,
+  });
   if (!options.prefix) {
     options.prefix = "";
   } else {
@@ -151,18 +194,28 @@ export default async function s3SpaUpload(
       ? options.prefix
       : `${options.prefix}/`;
   }
-  const uploaded = await walkDirectory(dir, (filePath) =>
-    uploadToS3(
-      bucket,
-      filePath.replace(regexp, ""),
-      filePath,
-      options.prefix!,
-      options.cacheControlMapping!
-    )
+  const uploaded = await walkDirectory(
+    dir,
+    (filePath) =>
+      uploadToS3(
+        _s3client,
+        bucket,
+        filePath.replace(new RegExp(`^${dir}/?`), ""),
+        filePath,
+        options.prefix!,
+        options.cacheControlMapping!
+      ),
+    options.concurrency
   );
   console.log(`Uploaded ${uploaded.length} files`);
   if (options.delete) {
-    const deleted = await removeOldFiles(bucket, uploaded, options.prefix);
+    const deleted = await removeOldFiles(
+      _s3client,
+      bucket,
+      uploaded,
+      options.prefix,
+      options.concurrency
+    );
     console.log(`Deleted ${deleted.length} old files`);
   }
 }
