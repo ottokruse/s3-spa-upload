@@ -200,7 +200,7 @@ export default async function s3SpaUpload(
       uploadToS3(
         _s3client,
         bucket,
-        filePath.replace(new RegExp(`^${dir}/?`), ""),
+        filePath.replace(new RegExp(String.raw`^${dir}/?`), ""),
         filePath,
         options.prefix!,
         options.cacheControlMapping!
