@@ -1,6 +1,6 @@
 {
   "name": "s3-spa-upload",
-  "version": "2.0.0",
+  "version": "2.0.1",
   "description": "Upload a single page application to S3 with the right content-type and cache-control meta-data",
   "main": "./src/index.js",
   "types": "./src/index.d.ts",
