@@ -68,7 +68,7 @@ function getCacheControl(
 
 async function walkDirectory(
   directoryPath: string,
-  callback: (filePath: string) => Promise<string>,
+  s3uploader: (filePath: string) => Promise<string>,
   concurrency: number,
   _recursion: {
     root: boolean;
@@ -82,7 +82,7 @@ async function walkDirectory(
   }
 ) {
   if (!_recursion.q) {
-    _recursion.q = fastq.promise(callback, concurrency);
+    _recursion.q = fastq.promise(s3uploader, concurrency);
   }
   for (const entry of readdirSync(directoryPath)) {
     const filePath = join(directoryPath, entry);
@@ -94,7 +94,7 @@ async function walkDirectory(
           .then((key) => _recursion.processedS3Keys.push(key))
       );
     } else if (stat.isDirectory()) {
-      await walkDirectory(filePath, callback, concurrency, {
+      await walkDirectory(filePath, s3uploader, concurrency, {
         ..._recursion,
         root: false,
       });
@@ -124,7 +124,6 @@ async function uploadToS3(
     CacheControl: getCacheControl(filePath, cacheControlMapping),
     ContentType: contentType(extname(filePath)) || undefined,
   };
-  await new Promise((resolve) => setTimeout(resolve, 2000));
   await s3client.send(new PutObjectCommand(params));
   console.log(
     `Uploaded s3://${params.Bucket}/${params.Key} | cache-control=${params.CacheControl} | content-type=${params.ContentType}`
@@ -148,28 +147,29 @@ async function removeOldFiles(
       Prefix: prefix,
     }
   );
-  let existingKeys: string[] = [];
-  for await (const page of paginator) {
-    for (const obj of page.Contents ?? []) {
-      if (obj.Key) existingKeys.push(obj.Key);
-    }
-  }
-  const keysToDelete = existingKeys
-    .filter((key) => key.startsWith(prefix))
-    .filter((key) => !uploadedKeys.includes(key));
   const q = fastq.promise(
     (key: string) =>
       s3client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
     concurrency
   );
   const promises = [];
-  for (const key of keysToDelete) {
-    promises.push(
-      q.push(key).then(() => console.log(`Deleted old file: ${key}`))
-    );
+  for await (const page of paginator) {
+    for (const obj of page.Contents ?? []) {
+      if (
+        obj.Key &&
+        obj.Key.startsWith(prefix) &&
+        !uploadedKeys.includes(obj.Key)
+      ) {
+        promises.push(
+          q
+            .push(obj.Key)
+            .then(() => console.log(`Deleted old file: ${obj.Key}`))
+        );
+      }
+    }
   }
   await Promise.all(promises);
-  return keysToDelete;
+  return promises.length;
 }
 
 let _s3client: S3Client;
@@ -209,13 +209,13 @@ export default async function s3SpaUpload(
   );
   console.log(`Uploaded ${uploaded.length} files`);
   if (options.delete) {
-    const deleted = await removeOldFiles(
+    const nrDeleted = await removeOldFiles(
       _s3client,
       bucket,
       uploaded,
       options.prefix,
       options.concurrency
     );
-    console.log(`Deleted ${deleted.length} old files`);
+    console.log(`Deleted ${nrDeleted} old files`);
   }
 }
