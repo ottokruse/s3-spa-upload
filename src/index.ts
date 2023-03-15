@@ -37,7 +37,7 @@ interface Options {
    * Max nr of files to upload to S3 in parallel
    * @default 100
    */
-  concurrency: number;
+  concurrency?: number;
 }
 
 export const CACHE_FOREVER = "public,max-age=31536000,immutable";
@@ -176,14 +176,11 @@ let _s3client: S3Client;
 export default async function s3SpaUpload(
   dir: string,
   bucket: string,
-  options: Options = {
-    concurrency: 100,
-  }
+  options: Options = {}
 ) {
   dir = resolve(dir);
-  if (!options.cacheControlMapping) {
-    options.cacheControlMapping = DEFAULT_CACHE_CONTROL_MAPPING;
-  }
+  options.cacheControlMapping ??= DEFAULT_CACHE_CONTROL_MAPPING;
+  options.concurrency ??= 100;
   _s3client = new S3Client({
     credentials: options.awsCredentials,
   });
