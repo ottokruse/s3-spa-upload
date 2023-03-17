@@ -69,44 +69,43 @@ function getCacheControl(
 async function walkDirectory(
   directoryPath: string,
   s3uploader: (filePath: string) => Promise<string>,
-  concurrency: number,
-  _recursion: {
-    root: boolean;
-    promises: Promise<any>[];
-    processedS3Keys: string[];
-    q?: queueAsPromised<string, string> | undefined;
-  } = {
-    root: true,
-    processedS3Keys: [],
-    promises: [],
-  }
+  concurrency: number
 ) {
-  if (!_recursion.q) {
-    _recursion.q = fastq.promise(s3uploader, concurrency);
+  function buildFileList(directoryPath: string, filePaths: string[] = []) {
+    for (const entry of readdirSync(directoryPath)) {
+      const filePath = join(directoryPath, entry);
+      const stat = statSync(filePath);
+      if (stat.isFile()) {
+        filePaths.push(filePath);
+      } else if (stat.isDirectory()) {
+        buildFileList(filePath, filePaths);
+      }
+    }
+    return filePaths;
   }
-  for (const entry of readdirSync(directoryPath)) {
-    const filePath = join(directoryPath, entry);
-    const stat = statSync(filePath);
-    if (stat.isFile()) {
-      _recursion.promises.push(
-        _recursion.q
-          .push(filePath)
-          .then((key) => _recursion.processedS3Keys.push(key))
-      );
-    } else if (stat.isDirectory()) {
-      await walkDirectory(filePath, s3uploader, concurrency, {
-        ..._recursion,
-        root: false,
-      });
+
+  const filePathsToUpload = buildFileList(directoryPath);
+  const uploadedS3Keys: string[] = [];
+  const worker = (filePath: string) =>
+    s3uploader(filePath).then((key) => uploadedS3Keys.push(key));
+  const q = fastq.promise(worker, concurrency);
+
+  console.log(
+    `Upload started of ${filePathsToUpload.length} files (with concurrency: ${q.concurrency})`
+  );
+
+  let p: Promise<unknown>;
+  for (const filePath of filePathsToUpload) {
+    p = q.push(filePath).catch((e) => {
+      throw e;
+    });
+    if (q.length() > 0) {
+      // backpressure
+      await p;
     }
   }
-  if (_recursion.root) {
-    console.log(
-      `Upload started of ${_recursion.promises.length} files (with concurrency: ${_recursion.q.concurrency})`
-    );
-    await Promise.all(_recursion.promises);
-  }
-  return _recursion.processedS3Keys;
+  await q.drained();
+  return uploadedS3Keys;
 }
 
 async function uploadToS3(
@@ -147,12 +146,17 @@ async function removeOldFiles(
       Prefix: prefix,
     }
   );
+  let deleted = 0;
   const q = fastq.promise(
     (key: string) =>
-      s3client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key })),
+      s3client
+        .send(new DeleteObjectCommand({ Bucket: bucket, Key: key }))
+        .then(() => {
+          console.log(`Deleted old file: ${key}`);
+          deleted++;
+        }),
     concurrency
   );
-  const promises = [];
   for await (const page of paginator) {
     for (const obj of page.Contents ?? []) {
       if (
@@ -160,16 +164,14 @@ async function removeOldFiles(
         obj.Key.startsWith(prefix) &&
         !uploadedKeys.includes(obj.Key)
       ) {
-        promises.push(
-          q
-            .push(obj.Key)
-            .then(() => console.log(`Deleted old file: ${obj.Key}`))
-        );
+        q.push(obj.Key).catch((e) => {
+          throw e;
+        });
       }
     }
+    await q.drained();
   }
-  await Promise.all(promises);
-  return promises.length;
+  return deleted;
 }
 
 let _s3client: S3Client;
@@ -204,15 +206,19 @@ export default async function s3SpaUpload(
       ),
     options.concurrency
   );
-  console.log(`Uploaded ${uploaded.length} files`);
+  let nrDeleted = 0;
   if (options.delete) {
-    const nrDeleted = await removeOldFiles(
+    nrDeleted = await removeOldFiles(
       _s3client,
       bucket,
       uploaded,
       options.prefix,
       options.concurrency
     );
-    console.log(`Deleted ${nrDeleted} old files`);
+  }
+  console.log("\nSUMMARY:");
+  console.log(` Uploaded ${uploaded.length} files`);
+  if (options.delete) {
+    console.log(` Deleted ${nrDeleted} old files`);
   }
 }
