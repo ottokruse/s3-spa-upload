@@ -130,7 +130,7 @@ async function uploadToS3(
   await _s3client.send(new PutObjectCommand(params)).catch((err: any) => {
     if (err.Code === "PermanentRedirect") {
       const redirectRegion = (err.Endpoint as string).match(
-        /.+\.s3-?(.*)\.amazonaws.com$/
+        /.+\.s3[-\.]?(.*)\.amazonaws.com$/
       )?.[1];
       _s3client = new S3Client({
         region: redirectRegion ?? "us-east-1",
