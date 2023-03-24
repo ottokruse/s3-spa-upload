@@ -2,7 +2,9 @@
 
 Upload a Single Page Application (React, Angular, Vue, ...) to S3 with the right content-type and cache-control meta-data.
 
-This module uploads the local SPA's build directory to S3, overwriting what's currently on S3. There's no intelligence (yet) to only upload changed files.
+This module uploads the local SPA's build directory to S3, overwriting what's currently on S3.
+
+Note: There's no intelligence (yet) to only upload changed files. There's also no intelligence (yet) to split big files in chunks and do multipart upload.
 
 ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiQit5K1dqTW4zc2xYbnhOK3pFNU01dEtmM3gzODk4dmZaMDkvVVUzcHJjMWZHMmpCT05yaVEzT3I3WDZ1L25lcTI4QXFhUnlRbngrZTBsNmpwbWdCOEJJPSIsIml2UGFyYW1ldGVyU3BlYyI6ImZoY2c2aVA0ZHBKV1FxS24iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 
