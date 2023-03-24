@@ -108,26 +108,44 @@ async function walkDirectory(
   return uploadedS3Keys;
 }
 
+let _s3client: S3Client;
 async function uploadToS3(
-  s3client: S3Client,
   bucket: string,
   key: string,
   filePath: string,
-  prefix: string,
-  cacheControlMapping: CacheControlMapping
+  prefix: string = "",
+  cacheControlMapping: CacheControlMapping = DEFAULT_CACHE_CONTROL_MAPPING,
+  awsCredentials?: AwsCredentials
 ) {
-  const params = {
+  _s3client ??= new S3Client({
+    credentials: awsCredentials,
+  });
+  const params: ConstructorParameters<typeof PutObjectCommand>[0] = {
     Bucket: bucket,
     Key: `${prefix}${key}`,
     Body: readFileSync(filePath),
     CacheControl: getCacheControl(filePath, cacheControlMapping),
     ContentType: contentType(extname(filePath)) || undefined,
   };
-  await s3client.send(new PutObjectCommand(params));
+  await _s3client.send(new PutObjectCommand(params)).catch((err: any) => {
+    if (err.Code === "PermanentRedirect") {
+      const redirectRegion = (err.Endpoint as string).match(
+        /.+\.s3-?(.*)\.amazonaws.com$/
+      )?.[1];
+      _s3client = new S3Client({
+        region: redirectRegion ?? "us-east-1",
+        credentials: awsCredentials,
+      });
+      return _s3client.send(new PutObjectCommand(params));
+    }
+    throw err;
+  });
   console.log(
-    `Uploaded s3://${params.Bucket}/${params.Key} | cache-control=${params.CacheControl} | content-type=${params.ContentType}`
+    `Uploaded s3://${params.Bucket}/${params.Key} | cache-control=${
+      params.CacheControl ?? "<empty>"
+    } | content-type=${params.ContentType ?? "<empty>"}`
   );
-  return params.Key;
+  return params.Key!;
 }
 
 async function removeOldFiles(
@@ -174,14 +192,12 @@ async function removeOldFiles(
   return deleted;
 }
 
-let _s3client: S3Client;
 export default async function s3SpaUpload(
   dir: string,
   bucket: string,
   options: Options = {}
 ) {
   dir = resolve(dir);
-  options.cacheControlMapping ??= DEFAULT_CACHE_CONTROL_MAPPING;
   options.concurrency ??= 100;
   _s3client = new S3Client({
     credentials: options.awsCredentials,
@@ -197,12 +213,12 @@ export default async function s3SpaUpload(
     dir,
     (filePath) =>
       uploadToS3(
-        _s3client,
         bucket,
         filePath.replace(new RegExp(String.raw`^${dir}/?`), ""),
         filePath,
-        options.prefix!,
-        options.cacheControlMapping!
+        options.prefix,
+        options.cacheControlMapping,
+        options.awsCredentials
       ),
     options.concurrency
   );
