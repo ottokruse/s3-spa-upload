@@ -41,18 +41,18 @@ interface Options {
 }
 
 export const CACHE_FOREVER = "public,max-age=31536000,immutable";
-export const CACHE_ONE_DAY_SWR_FOREVER =
-  "public,max-age=86400,stale-while-revalidate=31536000";
+export const CACHE_ONE_DAY_SWR_ONE_MONTH =
+  "public,max-age=86400,stale-while-revalidate=2592000";
 export const NO_CACHE = "no-cache";
-export const CACHE_ONE_MIN_SWR_FOREVER =
-  "public,max-age=60,stale-while-revalidate=31536000";
+export const CACHE_ONE_MIN_SWR_ONE_MONTH =
+  "public,max-age=60,stale-while-revalidate=2592000";
 export const DEFAULT_CACHE_CONTROL_MAPPING: CacheControlMapping = {
-  "index.html": CACHE_ONE_MIN_SWR_FOREVER,
+  "index.html": CACHE_ONE_MIN_SWR_ONE_MONTH,
   "*.css": CACHE_FOREVER,
   "*.js": CACHE_FOREVER,
-  "*.png": CACHE_ONE_DAY_SWR_FOREVER,
-  "*.ico": CACHE_ONE_DAY_SWR_FOREVER,
-  "*.txt": CACHE_ONE_DAY_SWR_FOREVER,
+  "*.png": CACHE_ONE_DAY_SWR_ONE_MONTH,
+  "*.ico": CACHE_ONE_DAY_SWR_ONE_MONTH,
+  "*.txt": CACHE_ONE_DAY_SWR_ONE_MONTH,
 };
 
 function getCacheControl(
