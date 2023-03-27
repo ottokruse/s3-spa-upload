@@ -175,6 +175,7 @@ async function removeOldFiles(
         }),
     concurrency
   );
+  let p: Promise<unknown>;
   for await (const page of paginator) {
     for (const obj of page.Contents ?? []) {
       if (
@@ -182,9 +183,13 @@ async function removeOldFiles(
         obj.Key.startsWith(prefix) &&
         !uploadedKeys.includes(obj.Key)
       ) {
-        q.push(obj.Key).catch((e) => {
+        p = q.push(obj.Key).catch((e) => {
           throw e;
         });
+        if (q.length() > 0) {
+          // backpressure
+          await p;
+        }
       }
     }
     await q.drained();
