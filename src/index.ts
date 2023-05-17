@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "fs";
-import { extname, join, resolve, sep } from "path";
+import { extname, join, resolve, sep, basename } from "path";
 import { contentType } from "mime-types";
 import {
   S3Client,
@@ -94,16 +94,25 @@ async function walkDirectory(
   );
 
   let p: Promise<unknown>;
-  for (const filePath of filePathsToUpload) {
-    p = q.push(filePath).catch((e) => {
-      throw e;
-    });
-    if (q.length() > 0) {
-      // backpressure
-      await p;
+
+  // First upload all referenced files (e.g. JS, CSS), only then upload index.html
+  for (const filter of [
+    (p: string) => basename(p) !== "index.html", // 1: upload JS, CSS, etc.
+    (p: string) => basename(p) === "index.html", // 2: upload index.html
+  ]) {
+    for (const filePath of filePathsToUpload.filter(filter)) {
+      p = q.push(filePath).catch((e) => {
+        throw e;
+      });
+      if (q.length() > 0) {
+        // backpressure
+        await p;
+      }
     }
+    // await all uploads completed
+    await q.drained();
   }
-  await q.drained();
+
   return uploadedS3Keys;
 }
 
