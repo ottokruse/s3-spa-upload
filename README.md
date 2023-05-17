@@ -60,27 +60,27 @@ Note that when used in conjunction with `--delete`, this means only old files ma
 ## Programmatic Usage
 
 ```typescript
-import s3SpaUpload from 's3-spa-upload';
+import s3SpaUpload from "s3-spa-upload";
 // const s3SpaUpload = require('s3-spa-upload')
 
-s3SpaUpload('dir', 'bucket').catch(console.error);
+s3SpaUpload("dir", "bucket").catch(console.error);
 
 // Can supply options:
 const options = {
-    delete: true,
-    prefix: 'mobile',
-    cacheControlMapping: {
-        'index.html': 'no-cache',
-        '*.js': 'public,max-age=31536000,immutable',
-    },
-    concurrency: 100, // max nr of files to upload to S3 in parallel
-    awsCredentials: {
-        accessKeyId: '...'
-        secretAccessKey: '...'
-        sessionToken: '...'
-    } // Optional. If not provided explicitly, the AWS SDK will source credentials as usual
-}
-s3SpaUpload('dir', 'bucket', options).catch(console.error);
+  delete: true,
+  prefix: "mobile",
+  cacheControlMapping: {
+    "index.html": "no-cache",
+    "*.js": "public,max-age=31536000,immutable",
+  },
+  concurrency: 100, // max nr of files to upload to S3 in parallel
+  awsCredentials: {
+    accessKeyId: "...",
+    secretAccessKey: "...",
+    sessionToken: "...",
+  }, // Optional. If not provided explicitly, the AWS SDK will source credentials as usual
+};
+s3SpaUpload("dir", "bucket", options).catch(console.error);
 ```
 
 ## Default Cache-Control settings
