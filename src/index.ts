@@ -1,5 +1,5 @@
 import { readdirSync, readFileSync, statSync } from "fs";
-import { extname, join, resolve } from "path";
+import { extname, join, resolve, sep } from "path";
 import { contentType } from "mime-types";
 import {
   S3Client,
@@ -9,7 +9,6 @@ import {
 } from "@aws-sdk/client-s3";
 import minimatch from "minimatch";
 import fastq from "fastq";
-import type { queueAsPromised } from "fastq";
 
 export interface CacheControlMapping {
   [glob: string]: string;
@@ -197,6 +196,24 @@ async function removeOldFiles(
   return deleted;
 }
 
+/**
+ * Create an S3 compatible key for a filepath by stripping the directory prefix,
+ * and using / as path separator
+ *
+ * Example:
+ *
+ * getS3KeyForFilePath('C:\\dir1\\dir2\\dir3\\index.html','C:\\dir1\\dir2') // output: 'dir3/index.html'
+ *
+ * @param filePath The full path to the file
+ * @param dir The full path of the directory that is being uploaded
+ * @returns An S3 compatible key
+ */
+function getS3KeyForFilePath(filePath: string, dir: string) {
+  const filePathSplitted = filePath.split(sep);
+  const dirSplitted = dir.split(sep);
+  return filePathSplitted.slice(dirSplitted.length).join("/");
+}
+
 export default async function s3SpaUpload(
   dir: string,
   bucket: string,
@@ -219,7 +236,7 @@ export default async function s3SpaUpload(
     (filePath) =>
       uploadToS3(
         bucket,
-        filePath.replace(new RegExp(String.raw`^${dir}/?`), ""),
+        getS3KeyForFilePath(filePath, dir),
         filePath,
         options.prefix,
         options.cacheControlMapping,
