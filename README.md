@@ -4,11 +4,13 @@ Upload a Single Page Application (React, Angular, Vue, ...) to S3 with the right
 
 This module uploads the local SPA's build directory to S3, overwriting what's currently on S3.
 
+`index.html` files are uploaded last, referenced JS/CSS files are uploaded first: so, users will only ever download `index.html` files that work, even during deployments.
+
 Note: There's no intelligence (yet) to only upload changed files. There's also no intelligence (yet) to split big files in chunks and do multipart upload.
 
 ![Build Status](https://codebuild.eu-west-1.amazonaws.com/badges?uuid=eyJlbmNyeXB0ZWREYXRhIjoiQit5K1dqTW4zc2xYbnhOK3pFNU01dEtmM3gzODk4dmZaMDkvVVUzcHJjMWZHMmpCT05yaVEzT3I3WDZ1L25lcTI4QXFhUnlRbngrZTBsNmpwbWdCOEJJPSIsIml2UGFyYW1ldGVyU3BlYyI6ImZoY2c2aVA0ZHBKV1FxS24iLCJtYXRlcmlhbFNldFNlcmlhbCI6MX0%3D&branch=master)
 
-This requires the following AWS S3 permissions (see sample CloudFormation policy template below):
+This module requires the following AWS S3 permissions (see sample CloudFormation policy template below):
 
 - s3:PutObject on objects in your bucket
 - s3:ListBucket on your bucket (only needed when using --delete option)
