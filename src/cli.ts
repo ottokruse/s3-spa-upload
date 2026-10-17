@@ -27,6 +27,13 @@ async function main() {
       "p",
       "Path prefix to prepend to every S3 object key of uploaded files"
     )
+    .string("t")
+    .array("t")
+    .alias("t", "tag")
+    .describe(
+      "t",
+      "S3 object tag, repeatable: --tag env=prod --tag version=3.4.5"
+    )
     .number("c")
     .alias("c", "concurrency")
     .default("concurrency", 100)
@@ -38,6 +45,30 @@ async function main() {
       return true;
     })
     .describe("c", "Nr of concurrent uploads (default: 100)")
+    .check((args) => {
+      for (const tag of args.tag ?? []) {
+        const eq = tag.indexOf("=");
+        if (eq < 1 || eq === tag.length - 1)
+          throw new Error(
+            `Error: tag must be of the form key=value, but you provided: ${tag}`
+          );
+        const key = tag.slice(0, eq);
+        if (key.length > 128)
+          throw new Error(
+            `Error: tag key must be at most 128 characters: ${key}`
+          );
+        if (tag.slice(eq + 1).length > 256)
+          throw new Error(
+            `Error: tag value must be at most 256 characters: ${tag.slice(eq + 1)}`
+          );
+      }
+      const keys = (args.tag ?? []).map((tag) => tag.slice(0, tag.indexOf("=")));
+      const duplicate = keys.find((key, i) => keys.indexOf(key) !== i);
+      if (duplicate) throw new Error(`Error: duplicate tag key: ${duplicate}`);
+      if ((args.tag ?? []).length > 50)
+        throw new Error("Error: at most 50 tags per object are allowed by S3");
+      return true;
+    })
     .help()
     .wrap(88).argv;
 
@@ -47,11 +78,18 @@ async function main() {
       readFileSync(args["cache-control-mapping"]).toString()
     );
   }
+  const tags = Object.fromEntries(
+    (args.tag ?? []).map((tag) => {
+      const eq = tag.indexOf("=");
+      return [tag.slice(0, eq), tag.slice(eq + 1)];
+    })
+  );
   await s3SpaUpload(args.directory!, args.bucketname!, {
     delete: args.delete,
     cacheControlMapping,
     prefix: args.prefix,
     concurrency: args.concurrency,
+    tags,
   });
 }
 
