@@ -59,6 +59,14 @@ By default the SPA will be uploaded to the root of your S3 bucket. If you don't 
 
 Note that when used in conjunction with `--delete`, this means only old files matching that same prefix will be deleted.
 
+### Tagging uploaded objects
+
+You can add S3 object tags to every uploaded object using the repeatable `--tag` option (each tag takes a `key=value` argument):
+
+    s3-spa-upload dist-dir my-s3-bucket-name --tag env=prod --tag version=3.4.5
+
+Tags are URL-encoded before upload (as required by S3), and validated up front: tag keys must be at most 128 characters, values at most 256 characters, at most 50 tags per object (S3 limits), and duplicate keys are rejected.
+
 ## Programmatic Usage
 
 ```typescript
@@ -83,6 +91,14 @@ const options = {
   }, // Optional. If not provided explicitly, the AWS SDK will source credentials as usual
 };
 s3SpaUpload("dir", "bucket", options).catch(console.error);
+
+// With object tags:
+s3SpaUpload("dir", "bucket", {
+  tags: {
+    env: "prod",
+    version: "3.4.5",
+  },
+}).catch(console.error);
 ```
 
 ## Default Cache-Control settings

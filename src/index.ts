@@ -29,6 +29,10 @@ interface Options {
   cacheControlMapping?: CacheControlMapping;
   awsCredentials?: AwsCredentials;
   /**
+   * S3 object tags to put on every uploaded object
+   */
+  tags?: Record<string, string>;
+  /**
    * S3 Bucket prefix to upload to
    */
   prefix?: string;
@@ -123,7 +127,8 @@ async function uploadToS3(
   filePath: string,
   prefix: string = "",
   cacheControlMapping: CacheControlMapping = DEFAULT_CACHE_CONTROL_MAPPING,
-  awsCredentials?: AwsCredentials
+  awsCredentials?: AwsCredentials,
+  tags?: Record<string, string>
 ) {
   _s3client ??= new S3Client({
     credentials: awsCredentials,
@@ -134,6 +139,7 @@ async function uploadToS3(
     Body: readFileSync(filePath),
     CacheControl: getCacheControl(filePath, cacheControlMapping),
     ContentType: contentType(extname(filePath)) || undefined,
+    Tagging: tags ? new URLSearchParams(tags).toString() : undefined,
   };
   await _s3client.send(new PutObjectCommand(params)).catch((err: any) => {
     if (err.Code === "PermanentRedirect") {
@@ -151,7 +157,9 @@ async function uploadToS3(
   console.log(
     `Uploaded s3://${params.Bucket}/${params.Key} | cache-control=${
       params.CacheControl ?? "<empty>"
-    } | content-type=${params.ContentType ?? "<empty>"}`
+    } | content-type=${params.ContentType ?? "<empty>"}${
+      params.Tagging ? ` | tags=${decodeURIComponent(params.Tagging)}` : ""
+    }`
   );
   return params.Key!;
 }
@@ -249,7 +257,8 @@ export default async function s3SpaUpload(
         filePath,
         options.prefix,
         options.cacheControlMapping,
-        options.awsCredentials
+        options.awsCredentials,
+        options.tags
       ),
     options.concurrency
   );
